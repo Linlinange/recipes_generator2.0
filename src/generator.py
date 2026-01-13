@@ -1,72 +1,117 @@
 # src/generator.py
 from src.config import ConfigManager
+from src.template import Template
 from src.template import TemplateManager
 from src.engine import ReplacementEngine, CombinationGenerator
 from src.writer import OutputWriter
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Set
 
 class RecipeGenerator:
-    """
-    主生成器（Facade 模式）
-    职责：协调所有组件，执行完整流程
-    对应原函数：main() 的执行逻辑
-    """
+    """主生成器：协调整个流程"""
     
     def __init__(self, config_path: str):
+        """初始化主生成器
+        
+        创建所有依赖组件并初始化统计变量。
+        
+        Args:
+            config_path: 配置文件路径
+        """
         # 1. 加载配置
         self.config = ConfigManager(config_path)
         
-        # 2. 初始化组件
-        self.template_manager = TemplateManager(self.config.template_dir)
+        # 2. 初始化引擎
         self.engine = ReplacementEngine(self.config)
-        self.writer = OutputWriter(self.config.output_dir)
+        
+        # 3. ✅ 初始化统计（关键修复）
+        self.stats = {"total": 0, "by_type": {}}
     
     def run(self, dry_run: bool = False, explain_mode: bool = False):
-        """运行完整流程"""
+        """运行完整生成流程"""
         print("\n🚀 开始生成...\n")
         
         # 加载模板
-        templates = self.template_manager.load_all(
-            self.config.get("template_files", [])
-        )
+        templates = self._load_templates()
         
         for template_name, template in templates.items():
             self._process_template(template, dry_run, explain_mode)
         
         # 打印统计
-        self.writer.print_stats()
-        
-        if dry_run:
-            print("⚠️  预览模式，未实际写入文件")
+        self._print_stats()
     
-    def _process_template(self, template, dry_run: bool, explain_mode: bool):
-        """处理单个模板"""
-        # 生成组合
-        combos = CombinationGenerator.generate(
-            self.config.get_active_rules(),
-            template.placeholders
-        )
+    def _load_templates(self) -> Dict[str, 'Template']:
+        """加载模板（辅助方法）"""
+        # 这里需要导入 Template 类
+        from src.template import Template
         
-        for combo_tuple in combos:
-            combo_dict = dict(zip(template.placeholders, combo_tuple))
+        template_dir = self.config.template_dir
+        templates = {}
+        
+        for filename in self.config.get("template_files", []):
+            path = template_dir / filename
+            if path.exists():
+                templates[filename] = Template(path)
+            else:
+                print(f"⚠️  模板不存在: {path}")
+        
+        return templates
+    
+    def _process_template(self, template: 'Template', dry_run: bool, explain_mode: bool):
+        """处理单个模板"""
+        combos = self._generate_combinations(template.placeholders)
+        
+        for combo in combos:
+            combo_dict = dict(zip(template.placeholders, combo))
             self._generate_single(template, combo_dict, dry_run, explain_mode)
     
-    def _generate_single(self, template, combo: Dict, dry_run: bool, explain_mode: bool):
-        """生成单个文件"""
-        # 1. 应用替换
+    def _generate_combinations(self, needed_types: Set[str]) -> List[tuple]:
+        """生成组合"""
+        from src.engine import CombinationGenerator
+        
+        rules = self.config.get_active_rules()
+        return CombinationGenerator.generate(rules, needed_types)
+    
+    def _generate_single(self, template: 'Template', combo_dict: Dict, 
+                         dry_run: bool, explain_mode: bool):
+        """生成单个文件（修复版本）"""
+        # 获取原始模板文件名
+        original_filename = template.path.name
+        
+        # 对文件名应用替换
+        resolved_filename = self.engine.apply(original_filename, combo_dict)
+        
+        # 处理安全字符
+        safe_filename = resolved_filename.replace(":", "_")
+        
+        # 对内容应用替换
         explain_log = [] if explain_mode else None
-        content = self.engine.apply(template.content, combo, explain_log)
+        content = self.engine.apply(template.content, combo_dict, explain_log)
         
-        # 2. 生成文件名
-        name_parts = [f"{k}_{v.replace(':', '_')}" for k, v in combo.items()]
-        filename = "_".join(name_parts) + ".json"
+        # 写入或预览
+        if dry_run:
+            print(f"📄 [预览] {safe_filename}")
+            self.stats["total"] += 1
+            return
         
-        # 3. 写入
-        self.writer.write(filename, content, dry_run)
+        # 创建目录并写入
+        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = self.config.output_dir / safe_filename
         
-        # 4. 解释模式输出
-        if explain_mode:
-            print(f"\n📝 组合: {combo}")
-            for log in explain_log or []:
+        try:
+            output_path.write_text(content, encoding="utf-8")
+            self.stats["total"] += 1
+            print(f"✏️  {safe_filename}")
+        except Exception as e:
+            print(f"❌ 写入失败 {safe_filename}: {e}")
+        
+        # 解释模式日志
+        if explain_mode and explain_log:
+            print(f"\n📝 组合: {combo_dict}")
+            for log in explain_log:
                 print(log)
+    
+    def _print_stats(self):
+        """打印统计"""
+        print(f"\n=== 🎯 生成完成 ===")
+        print(f"总数: {self.stats['total']} 个文件")
