@@ -1,0 +1,4 @@
+﻿{
+  "type": "minecraft:crafting_shaped",
+  "result": {"item": "{modid}{tree}_planks"}
+}

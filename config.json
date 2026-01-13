@@ -1,7 +1,7 @@
 {
   "output_dir": "./output",
   "template_dir": "./templates",
-  "default_namespace": "minecraft:",
+  "default_namespace": "",
   "explain_mode": false,
   "replacements": [
     {
@@ -21,28 +21,26 @@
         "*": {
           "direct_minecraft": "direct"
         },
-        "deeperdarker:bloom": {
-          "_log": "_stems"
-        },
         "bamboo": {
           "_log": "_block",
           "_boat": "_raft"
-      },
-      "warped": {
-          "_log": "_stem",
-      "_wood": "_hyphae"
+        },
+        "warped": {
+            "_log": "_stem",
+        "_wood": "_hyphae"
         },
         "crimson": {
           "_log": "_stem",
           "_wood": "_hyphae"
         }
       },
-      "enabled": true,
+      "enabled": false,
       "description": "原版木材"
     },
     {
       "type": "tree",
       "values": [
+        "bigglobe:charred",
         "biomesoplenty:fir", 
         "biomesoplenty:pine", 
         "biomesoplenty:maple", 
@@ -57,30 +55,45 @@
         "biomesoplenty:hellbark", 
         "biomesoplenty:empyreal", 
         "deeperdarker:echo", 
-        "deeperdarker:bloom"
+        "deeperdarker:bloom",
+        "minecells:putrid"
       ],
       "extra": {
-        "*": {
-          "direct_minecraft": "direct"
-        },
         "deeperdarker:bloom": {
-          "_log": "_stems"
-        },
-        "bamboo": {
-          "_log": "_block",
-          "_boat": "_raft"
-      },
-      "warped": {
-          "_log": "_stem",
-      "_wood": "_hyphae"
-        },
-        "crimson": {
-          "_log": "_stem",
-          "_wood": "_hyphae"
+          "_log": "_stem"
         }
       },
       "enabled": false,
-      "description": "模组木材"
+      "description": "常规模组木材"
+    },
+    {
+      "type": "tree",
+      "values": [ 
+        "ribbits:mossy_oak",
+        "luphieclutteredmod:luphie_glow",
+        "luphieclutteredmod:luphie_green",
+        "luphieclutteredmod:luphie_blue_mushroom",
+        "luphieclutteredmod:luphie_pink",
+        "luphieclutteredmod:luphie_flowering_pink",
+        "luphieclutteredmod:luphie_purple",
+        "luphieclutteredmod:luphie_flowering_purple",
+        "luphieclutteredmod:luphie_yellow",
+        "luphieclutteredmod:luphie_flowering_yellow"
+      ],
+      "extra": {
+        "luphieclutteredmod:luphie_pink": {
+          "_door": "_heart_door"
+        },
+        "luphieclutteredmod:luphie_flowering_pink": {
+          "_door": "_heart_door",
+          "stripped_luphie_flowering_pink_log": "stripped_luphie_flowering_pinklog"
+        },
+        "luphieclutteredmod:luphie_blue_mushroom": {
+          "_blue_mushroom_door": "_glowshroom_door"
+        }
+      },
+      "enabled": true,
+      "description": "不完善模组木材"
     },
     {
       "type": "cobblestone",
@@ -89,16 +102,11 @@
         "blackstone",
         "cobbled_deepslate"
       ],
-      "extra": {
-        "*": {
-          "direct_minecraft": "direct"
-        }
-      },
       "enabled": false,
       "description": "生成圆石相关的配方"
     }
   ],
   "template_files": [
-    "{tree}.json"
+    "{modid}{tree}_door.json"
   ]
 }
