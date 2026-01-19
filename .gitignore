@@ -2,6 +2,8 @@
 
 # 项目自定义
 temp/
+templates_test/
+test_filenames_config.json
 *.tmp
 
 # Python
