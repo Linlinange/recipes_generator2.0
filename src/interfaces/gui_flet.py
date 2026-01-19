@@ -7,7 +7,8 @@ import sys
 # 将项目根目录加入 Python 路径
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from src import RecipeGenerator
+# ✅ 更新导入：从 service 层导入 RecipeService
+from src.service.recipe_service import RecipeService
 
 class RecipeGeneratorApp:
     def __init__(self):
@@ -17,7 +18,7 @@ class RecipeGeneratorApp:
         self.explain_mode = False
         self.page = None
         
-        # ✅ 在 __init__ 中初始化组件（兼容 Python 3.6+）
+        # UI 组件
         self.log_view = ft.ListView(height=300, spacing=5, expand=True)
         self.stats_text = ft.Text("总数: 0 个文件")
     
@@ -26,7 +27,7 @@ class RecipeGeneratorApp:
         self.page = page
         
         return ft.Column(
-            [  # ✅ 方括号开始
+            [
                 ft.Text("🎮 MC Recipe Generator", size=30, weight=ft.FontWeight.BOLD),
                 
                 ft.Row([
@@ -45,11 +46,11 @@ class RecipeGeneratorApp:
                 ]),
                 
                 ft.Text("📋 日志输出:", size=16),
-                self.log_view,  # ✅ 直接使用
+                self.log_view,
                 
                 ft.Text("📊 统计:", size=16),
-                self.stats_text,  # ✅ 直接使用
-            ],  # ✅ 方括号结束
+                self.stats_text,
+            ],
             spacing=20,
             expand=True,
         )
@@ -64,12 +65,15 @@ class RecipeGeneratorApp:
         self.explain_mode = e.control.value
     
     def on_generate(self, e):
+        """生成按钮点击事件"""
         try:
-            self.generator = RecipeGenerator(self.config_path)
+            # ✅ 更新：使用 RecipeService
+            self.generator = RecipeService(self.config_path)
         except Exception as ex:
             self.log(f"❌ 配置加载失败: {ex}")
             return
         
+        # 重定向 print 到日志
         import builtins
         old_print = builtins.print
         
@@ -81,31 +85,47 @@ class RecipeGeneratorApp:
         builtins.print = custom_print
         
         try:
+            # ✅ 更新：调用服务
             self.generator.run(dry_run=self.dry_run, explain_mode=self.explain_mode)
-            total = self.generator.writer.stats.get("total", 0)
+            
+            # ✅ 更新：从 output_writer 获取统计
+            stats = self.generator.output_writer.get_stats()
+            total = stats.get("total", 0)
             self.update_stats(total)
+            
         except Exception as ex:
             self.log(f"❌ 生成失败: {ex}")
         finally:
             builtins.print = old_print
     
     def log(self, msg: str):
+        """添加日志到界面"""
         self.log_view.controls.append(ft.Text(msg, size=12))
         self.page.update()
     
     def update_stats(self, total: int):
+        """更新统计信息"""
         self.stats_text.value = f"总数: {total} 个文件"
         self.page.update()
     
     def open_output(self, e):
-        output_dir = Path("output")
-        if output_dir.exists():
-            import subprocess
-            subprocess.Popen(f'explorer "{output_dir.absolute()}"')
-        else:
-            self.log("⚠️ 输出目录不存在")
+        """打开输出目录"""
+        try:
+            # ✅ 更新：从配置获取输出目录
+            from src.dao.config_dao import ConfigDAO
+            config = ConfigDAO.load(self.config_path)
+            output_dir = Path(config.output_dir)
+            
+            if output_dir.exists():
+                import subprocess
+                subprocess.Popen(f'explorer "{output_dir.absolute()}"')
+            else:
+                self.log("⚠️ 输出目录不存在")
+        except Exception as ex:
+            self.log(f"❌ 无法打开目录: {ex}")
 
 def main():
+    """Flet 应用入口"""
     def run(page: ft.Page):
         page.title = "MC Recipe Generator"
         page.window_width = 800
