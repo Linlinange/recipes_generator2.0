@@ -1,37 +1,21 @@
-#!/usr/bin/env python3
-"""
-主入口：CLI + Flet GUI 双模式
-"""
 
-from src import RecipeGenerator
-from src.interfaces.gui_flet import main as run_flet
-import argparse
+import sys
+from pathlib import Path
+from src.service.recipe_service import RecipeService  # ✅ 更新导入
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="MC Recipe Generator - CLI + Flet GUI",
-        epilog="示例: python main.py --ui flet  # 启动桌面应用"
-    )
+    # 配置路径（默认或命令行参数）
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "config.json"
     
-    parser.add_argument(
-        "--ui", 
-        choices=["cli", "flet"], 
-        default="cli", 
-        help="界面模式: cli(命令行) / flet(桌面应用)"
-    )
-    
-    parser.add_argument("--dry-run", action="store_true", help="预览模式")
-    parser.add_argument("--explain", action="store_true", help="解释模式")
-    
-    args = parser.parse_args()
-    
-    if args.ui == "flet":
-        # ✅ 启动 Flet 桌面应用
-        run_flet()
-    else:
-        # CLI 模式
-        generator = RecipeGenerator("config.json")
-        generator.run(dry_run=args.dry_run, explain_mode=args.explain)
+    try:
+        # ✅ 更新：使用 RecipeService
+        service = RecipeService(config_path)
+        service.run(dry_run=False, explain_mode=False)
+    except Exception as e:
+        print(f"❌ 错误: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
