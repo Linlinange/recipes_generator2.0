@@ -1,7 +1,7 @@
 """
 MC Recipe Generator - Minecraft 配方批量生成器
 
-版本: 2.1.0
+版本: 2.2.0
 作者: 林林解说ange
 仓库: https://github.com/yourusername/mc-recipe-generator
 
@@ -13,13 +13,6 @@ MC Recipe Generator - Minecraft 配方批量生成器
 - 预览模式：--dry-run 预览生成结果
 - 解释模式：--explain 显示详细替换过程
 
-核心类:
-- RecipeGenerator: 主生成器，协调整个流程
-- ConfigManager: 配置管理，支持旧格式迁移
-- Template: 模板封装，自动扫描占位符
-- ReplacementEngine: 替换引擎，核心替换逻辑
-- OutputWriter: 文件写入与统计
-
 使用示例:
     from src import RecipeGenerator
     
@@ -27,7 +20,7 @@ MC Recipe Generator - Minecraft 配方批量生成器
     generator.run(dry_run=True, explain_mode=True)
 """
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __author__ = "Linlinange"
 __email__ = "linlinange@163.com"
 __license__ = ""
