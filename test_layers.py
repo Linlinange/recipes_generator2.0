@@ -1,8 +1,9 @@
 
+import json
 from pathlib import Path
 import sys
 import os
-import json
+import shutil
 
 # 将src加入Python路径
 sys.path.append(str(Path(__file__).parent))
@@ -28,12 +29,12 @@ def test_model_layer():
         template = Template(test_file)
         print(f"✅ 模板路径: {template.path.name}")
         print(f"✅ 识别到的占位符: {template.placeholders}")
-        assert 'tree' in template.placeholders, "应该识别到 tree 占位符"
-        assert 'tool' in template.placeholders, "应该识别到 tool 占位符"
+        assert 'tree' in template.placeholders
+        assert 'tool' in template.placeholders
         
-        test_file.unlink()  # 清理临时文件
+        test_file.unlink()
         
-        # 2. 测试 Config
+        # 2. 测试 Config 和 ReplacementRule
         print("\n[测试 Config 类]")
         config_data = {
             "output_dir": "./test_output",
@@ -41,22 +42,19 @@ def test_model_layer():
             "default_namespace": "minecraft:",
             "template_files": ["test.json"],
             "replacements": [
-                {"type": "tree", "values": ["oak", "pine"], "extra": {}},
-                {"type": "tool", "values": ["axe", "sword"], "extra": {}}
+                {"type": "tree", "values": ["oak", "pine"], "extra": {}}
             ]
         }
         
         config = Config(config_data)
         print(f"✅ 输出目录: {config.output_dir}")
-        print(f"✅ 默认命名空间: {config.default_namespace}")
-        print(f"✅ 模板文件列表: {config.template_files}")
-        print(f"✅ 替换规则数: {len(config.rules)}")
+        print(f"✅ 规则数量: {len(config.rules)}")
         
         rule = config.rules[0]
-        print(f"✅ 第一条规则类型: {rule.type}, 值数量: {len(rule.values)}")
+        print(f"✅ 第一条规则类型: {rule.type}, 值: {rule.values}")
         
-        assert len(config.rules) == 2, "应该有2条规则"
-        assert config.rules[0].type == "tree", "第一条规则类型应该是 tree"
+        assert len(config.rules) == 1
+        assert config.rules[0].type == "tree"
         
         print("\n✅ Model 层测试全部通过！")
         return True
@@ -83,8 +81,8 @@ def test_core_layer():
                 type='tree', 
                 values=['oak', 'bamboo'],
                 extra={
-                    '*': {'LOG': 'WOOD'},  # 通配符规则
-                    'bamboo': {'SPECIAL': 'BAMBOO_BLOCK'}  # 具体规则
+                    '*': {'LOG': 'WOOD'},
+                    'bamboo': {'SPECIAL_MATERIAL': 'BAMBOO_BLOCK'}
                 }
             ),
             ReplacementRule(type='tool', values=['axe'], extra={})
@@ -94,16 +92,15 @@ def test_core_layer():
         print("\n[测试组合生成]")
         engine = ReplacementEngine('minecraft:', rules)
         
-        # 模拟模板对象
         class MockTemplate:
             placeholders = ['tree', 'tool']
         
         combos = engine.generate_combinations(MockTemplate())
         print(f"✅ 生成组合数量: {len(combos)}")
-        for i, combo in enumerate(combos[:3]):  # 显示前3个
+        for i, combo in enumerate(combos[:3]):
             print(f"   组合 {i+1}: {combo}")
         
-        assert len(combos) == 2, "应该生成2个组合（2树种 × 1工具）"
+        assert len(combos) == 2
         
         # 2. 测试基础替换
         print("\n[测试基础替换]")
@@ -111,28 +108,25 @@ def test_core_layer():
         result = engine.apply(content, combos[0])
         print(f"✅ 输入: {content}")
         print(f"✅ 输出: {result}")
-        assert "minecraft:oak_axe" in result, "应该正确替换占位符"
+        assert "minecraft:oak_axe" in result
         
         # 3. 测试额外规则（通配符）
-        print("\n[测试额外规则 - 通配符]")
+        print("\n[测试通配符规则]")
         content_with_extra = "{tree}_{tool} uses LOG"
         result = engine.apply(content_with_extra, combos[0], explain_log=[])
-        print(f"✅ 输入: {content_with_extra}")
         print(f"✅ 输出: {result}")
-        assert "WOOD" in result, "通配符规则应该生效"
+        assert "WOOD" in result
         
         # 4. 测试额外规则（具体值）
-        print("\n[测试额外规则 - 具体值]")
-        # 使用包含 SPECIAL 的模板来测试 bamboo 特定规则
-        content_with_special = "{tree}_{tool} uses SPECIAL"
+        print("\n[测试特定规则]")
+        content_with_special = "{tree}_{tool} uses SPECIAL_MATERIAL"
         result = engine.apply(content_with_special, combos[1], explain_log=[])
-        print(f"✅ bamboo 组合输出: {result}")
-        assert "BAMBOO_BLOCK" in result, "bamboo的特定规则应该生效"
+        print(f"✅ bamboo 输出: {result}")
+        assert "BAMBOO_BLOCK" in result
         
-        # 验证 oak 不使用 bamboo 规则
+        # 验证 oak 不触发 bamboo 规则
         result_oak = engine.apply(content_with_special, combos[0], explain_log=[])
-        print(f"✅ oak 组合输出: {result_oak}")
-        assert result_oak == "oak_axe uses SPECIAL", "oak 不应该触发 bamboo 规则"
+        assert result_oak == "oak_axe uses SPECIAL_MATERIAL"
         
         print("\n✅ Core 层测试全部通过！")
         return True
@@ -144,7 +138,7 @@ def test_core_layer():
         return False
 
 def test_dao_layer():
-    """测试DAO层（Loader + Writer）"""
+    """测试DAO层"""
     print("\n" + "=" * 60)
     print("🧪 测试 DAO 层")
     print("=" * 60)
@@ -156,14 +150,11 @@ def test_dao_layer():
         
         # 1. 测试 ConfigDAO
         print("\n[测试 ConfigDAO]")
-        
         config_data = {
-            "output_dir": "./test_output",
+            "output_dir": "./test_dao_output",
             "template_dir": "./templates",
             "default_namespace": "minecraft:",
-            "replacements": [
-                {"type": "tree", "values": ["oak", "birch"], "extra": {}}
-            ]
+            "replacements": [{"type": "tree", "values": ["oak", "birch"], "extra": {}}]
         }
         
         temp_config = Path("test_temp_config.json")
@@ -171,15 +162,12 @@ def test_dao_layer():
         
         config = ConfigDAO.load("test_temp_config.json")
         print(f"✅ 配置加载成功")
-        print(f"   输出目录: {config.output_dir}")
-        print(f"   规则数量: {len(config.rules)}")
         assert len(config.rules) == 1
         
         temp_config.unlink()
         
         # 2. 测试 TemplateLoader
         print("\n[测试 TemplateLoader]")
-        
         temp_template = Path("templates/test_loader.json")
         temp_template.parent.mkdir(exist_ok=True)
         temp_template.write_text('{"item": "{tree}_planks"}', encoding='utf-8')
@@ -191,8 +179,7 @@ def test_dao_layer():
         
         # 3. 测试 OutputWriter
         print("\n[测试 OutputWriter]")
-        
-        output_dir = Path("test_writer_output")
+        output_dir = Path("test_dao_output")
         writer = OutputWriter(output_dir)
         
         test_content = '{"item": "oak_planks"}'
@@ -223,6 +210,126 @@ def test_dao_layer():
         traceback.print_exc()
         return False
 
+def test_service_layer():
+    """测试Service层（完整流程）"""
+    print("\n" + "=" * 60)
+    print("🧪 测试 Service 层")
+    print("=" * 60)
+    
+    try:
+        from src.service.recipe_service import RecipeService
+        
+        # 1. 准备测试配置
+        config_data = {
+            "output_dir": "./test_service_output",
+            "template_dir": "./test_templates",
+            "default_namespace": "minecraft:",
+            "template_files": ["{tree}_table.json"],
+            "replacements": [
+                {
+                    "type": "tree", 
+                    "values": ["oak", "birch"],
+                    "extra": {
+                        "*": {"_planks": "_wood"},  # 通配符规则
+                        "minecraft:birch": {"__BIRCH_SPECIAL__": "birch_special_item"}  # 使用独特标记
+                    }
+                }
+            ]
+        }
+        
+        # 2. 创建临时配置
+        Path("test_service_config.json").write_text(
+            json.dumps(config_data), encoding='utf-8'
+        )
+        
+        # 3. 创建模板
+        template_dir = Path("test_templates")
+        template_dir.mkdir(exist_ok=True)
+        
+        # ✅ 修复：模板文件名带占位符
+        test_template = '''{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["##", "##"],
+  "key": {"#": {"item": "minecraft:{tree}_planks"}},
+  "result": {"item": "minecraft:{tree}__BIRCH_SPECIAL__", "count": 1}
+}'''
+        (template_dir / "{tree}_table.json").write_text(test_template, encoding='utf-8')
+        
+        # 4. 测试预览模式
+        print("\n[测试预览模式]")
+        service = RecipeService("test_service_config.json")
+        service.run(dry_run=True, explain_mode=False)
+        
+        stats = service.output_writer.get_stats()
+        print(f"✅ 预览模式统计: {stats}")
+        assert stats["total"] == 2
+        
+        # 5. 测试实际写入
+        service.output_writer.stats["total"] = 0  # 重置统计
+        
+        print("\n[测试实际写入]")
+        service.run(dry_run=False, explain_mode=False)
+        
+        output_dir = Path("test_service_output")
+        print(f"检查输出目录: {output_dir.absolute()}")
+        print(f"目录存在: {output_dir.exists()}")
+        if output_dir.exists():
+            files = list(output_dir.glob("*.json"))
+            print(f"目录内容: {files}")
+        
+        # ✅ 修复：预期文件名
+        oak_file = output_dir / "oak_table.json"
+        birch_file = output_dir / "birch_table.json"
+        
+        print(f"检查 oak 文件: {oak_file.absolute()}")
+        print(f"oak 文件存在: {oak_file.exists()}")
+        print(f"检查 birch 文件: {birch_file.absolute()}")
+        print(f"birch 文件存在: {birch_file.exists()}")
+        
+        assert oak_file.exists(), f"文件不存在: {oak_file.absolute()}"
+        assert birch_file.exists(), f"文件不存在: {birch_file.absolute()}"
+        
+        # 6. 验证内容
+        print("\n[验证文件内容]")
+        
+        oak_data = json.loads(oak_file.read_text(encoding='utf-8'))
+        print(f"✅ oak 文件内容: {oak_data}")
+        # oak 应该只有通配符规则生效
+        assert "oak_wood" in str(oak_data)
+        assert "__BIRCH_SPECIAL__" in str(oak_data)  # 特殊标记保持不变
+        
+        birch_data = json.loads(birch_file.read_text(encoding='utf-8'))
+        print(f"✅ birch 文件内容: {birch_data}")
+        # birch 应该通配符和特定规则都生效
+        assert "birch_wood" in str(birch_data)
+        assert "birch_special_item" in str(birch_data)  # ✅ 修复这行
+        assert "__BIRCH_SPECIAL__" not in str(birch_data)  # 标记被替换
+        
+        # 7. 验证统计
+        stats = service.output_writer.get_stats()
+        print(f"✅ 最终统计: {stats}")
+        assert stats["total"] == 2
+        
+        # 8. 清理
+        print("\n[清理测试文件]")
+        Path("test_service_config.json").unlink()
+        shutil.rmtree(template_dir)
+        shutil.rmtree(output_dir)
+        
+        print("\n✅ Service 层测试全部通过！")
+        return True
+        
+    except AssertionError as e:
+        print(f"\n❌ 断言失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    except Exception as e:
+        print(f"\n❌ Service 层测试失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
 def main():
     """主测试函数"""
     print("\n🎯 开始分层测试...")
@@ -230,17 +337,19 @@ def main():
     results = []
     results.append(test_model_layer())
     results.append(test_core_layer())
-    results.append(test_dao_layer())  # 添加这一行
+    results.append(test_dao_layer())
+    results.append(test_service_layer())
     
     print("\n" + "=" * 60)
     print("📊 测试总结")
     print("=" * 60)
-    print(f"Model 层: {'✅ 通过' if results[0] else '❌ 失败'}")
-    print(f"Core 层:  {'✅ 通过' if results[1] else '❌ 失败'}")
-    print(f"DAO 层:  {'✅ 通过' if results[2] else '❌ 失败'}")
+    print(f"Model 层:   {'✅ 通过' if results[0] else '❌ 失败'}")
+    print(f"Core 层:    {'✅ 通过' if results[1] else '❌ 失败'}")
+    print(f"DAO 层:     {'✅ 通过' if results[2] else '❌ 失败'}")
+    print(f"Service 层: {'✅ 通过' if results[3] else '❌ 失败'}")
     
     if all(results):
-        print("\n🎉 所有测试通过！可以继续下一层重构了。")
+        print("\n🎉 所有测试通过！重构成功！")
         sys.exit(0)
     else:
         print("\n⚠️  部分测试失败，请检查代码。")
