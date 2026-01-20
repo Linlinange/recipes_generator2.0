@@ -9,7 +9,7 @@ class ReplacementRule:
     values: List[str]
     extra: Optional[Dict[str, Dict[str, str]]] = None
     enabled: bool = True
-    description: str = ""
+    description: str = ""  # ✅ 正式字段
     
     def __post_init__(self):
         # 确保extra有默认值
@@ -38,6 +38,7 @@ class Config:
         self.default_namespace = raw_data.get("default_namespace", "minecraft:")
         self.template_files = raw_data.get("template_files", [])
         
+        # ✅ 使用工厂方法创建规则，自动忽略未知字段
         self.rules = [
             ReplacementRule.create(rule)
             for rule in raw_data.get("replacements", [])
