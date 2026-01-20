@@ -1,59 +1,73 @@
-"""
-LocalizerService - 占位实现
-职责：本地化业务逻辑（功能开发中）
-"""
+# src/service/localizer_service.py
 
+from typing import Optional, Dict, Any
 from pathlib import Path
-from typing import Dict, Optional
+from src.service.settings_service import SettingsService
+
 
 class LocalizerService:
-    """单例：本地化服务（功能未实现）"""
+    """
+    本地化服务（架构占位）
+    职责：管理多语言翻译、资源文件生成
+    """
     
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
-    
-    def __init__(self):
-        if self._initialized:
-            return
+    def __init__(self, settings_service: Optional[SettingsService] = None):
+        """
+        依赖注入SettingsService，自动加载配置
+        """
+        self.settings_service = settings_service
+        self.config: Optional[Dict[str, Any]] = None
         
-        self._initialized = True
-        self.supported_langs = ["en_us", "zh_cn"]
-        self.placeholder_data: Dict[str, str] = {}
+        # 自动同步配置
+        if settings_service:
+            self.reload_config()
     
-    # ==================== 占位方法（仅保证不报错） ====================
-    
-    def load_language_files(self, lang_dir: Path) -> Dict[str, Dict[str, str]]:
-        """加载语言文件（占位）"""
-        # 返回空字典，避免报错
-        return {"en_us": {}, "zh_cn": {}}
-    
-    def batch_translate(self, texts: list, target_lang: str) -> Dict[str, str]:
-        """批量翻译（占位）"""
-        # 返回原字符串，不做实际翻译
-        return {text: f"[{target_lang}]{text}" for text in texts}
-    
-    def export_translations(self, output_dir: Path, translations: Dict[str, Dict[str, str]]) -> bool:
-        """导出翻译文件（占位）"""
+    def reload_config(self) -> bool:
+        """
+        从SettingsService加载本地化相关配置
+        返回: 是否成功
+        """
+        if not self.settings_service:
+            print("⚠️  LocalizerService: 未配置SettingsService")
+            return False
+        
         try:
-            # 创建输出目录
-            output_dir.mkdir(parents=True, exist_ok=True)
+            config_dict = self.settings_service.get_config_dict()
             
-            # 创建占位文件（实际功能开发中）
-            for lang in self.supported_langs:
-                placeholder_file = output_dir / f"{lang}_placeholder.json"
-                placeholder_file.write_text(
-                    '{"placeholder": "Localization feature in development"}',
-                    encoding='utf-8'
-                )
+            # 提取本地化相关配置（预留字段）
+            self.config = {
+                "target_languages": config_dict.get("target_languages", ["en_us"]),
+                "source_lang_dir": config_dict.get("source_lang_dir", "./lang"),
+                "output_lang_dir": config_dict.get("output_lang_dir", "./output/lang"),
+            }
+            
+            print("✅ LocalizerService: 配置已同步")
             return True
-        except Exception:
+        except Exception as ex:
+            print(f"❌ LocalizerService: 配置加载失败: {ex}")
             return False
     
-    def get_status(self) -> str:
-        """获取状态"""
-        return "🚧 本地化功能开发中"
+    def process_translation(self, template_file: str) -> bool:
+        """
+        处理单个翻译模板（占位方法）
+        参数: template_file - 模板文件路径
+        返回: 是否成功
+        """
+        if not self.config:
+            print("❌ 配置未加载")
+            return False
+        
+        # TODO: 未来实现
+        print(f"📝 处理翻译模板: {template_file}")
+        print(f"   目标语言: {self.config['target_languages']}")
+        
+        return True
+    
+    def get_supported_languages(self) -> list[str]:
+        """
+        获取支持的语言列表（预留接口）
+        """
+        if not self.config:
+            return ["en_us"]
+        
+        return self.config.get("target_languages", ["en_us"])

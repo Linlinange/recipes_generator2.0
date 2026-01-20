@@ -26,6 +26,7 @@ def main(page: ft.Page):
     page.title = "MC Recipe Generator"
     page.window_width = 900
     page.window_height = 700
+    page.window_resizable = True
     
     # 创建单例Service
     settings_service = SettingsService()

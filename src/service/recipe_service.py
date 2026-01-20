@@ -16,6 +16,7 @@ from src.dao.config_dao import ConfigDAO
 from src.dao.template_loader import TemplateLoader
 from src.dao.output_writer import OutputWriter
 from src.core.engine import ReplacementEngine
+from src.service.settings_service import SettingsService
 
 
 class RecipeService:
@@ -29,48 +30,54 @@ class RecipeService:
             cls._instance._initialized = False
         return cls._instance
     
-    def __init__(self):
-        if self._initialized:
-            return
+    def __init__(self, settings_service: Optional['SettingsService'] = None):
+        self._initialized = False
         
-        self._initialized = True
-        
-        # 持有生成所需的所有组件
+        # 持有对所有DAO的引用
         self.config: Optional[Config] = None
         self.engine: Optional[ReplacementEngine] = None
         self.template_loader: Optional[TemplateLoader] = None
         self.output_writer: Optional[OutputWriter] = None
         
-        # 状态管理
-        self._is_running = False
-        self._cancel_requested = False
-        self._processed_count = 0
-        self._current_template_name = ""
-        self._total_templates = 0
+        # 新增：依赖SettingsService
+        self.settings_service = settings_service
         
-        # 回调函数
-        self.on_progress: Optional[Callable[[str], None]] = None
-        self.on_complete: Optional[Callable[[Dict[str, Any]], None]] = None
-        self.on_error: Optional[Callable[[Exception], None]] = None
+        # 如果提供了SettingsService，立即加载配置
+        if settings_service:
+            self.reload_config()
+        
+        # ... 其他初始化代码 ...
     
     # ==================== 公共API（供Page调用） ====================
     
-    def load_config(self, config_path: str = "config.json") -> bool:
-        """
-        加载配置（调用ConfigDAO）
-        参数:
-            config_path: 配置文件路径
-        返回:
-            是否成功
-        """
+    def reload_config(self) -> bool:
+        """从SettingsService重新加载配置"""
+        if not self.settings_service:
+            print("❌ 未配置SettingsService")
+            return False
+        
+        try:
+            config_dict = self.settings_service.get_config_dict()
+            if not config_dict:
+                print("⚠️  配置为空")
+                return False
+            
+            self.config = Config.from_dict(config_dict)
+            self._initialize_components()
+            self._log("✅ 配置已从SettingsService同步")
+            return True
+        except Exception as ex:
+            print(f"❌ 从SettingsService加载配置失败: {ex}")
+            return False
+    
+    def load_config_from_file(self, config_path: str = "config.json") -> bool:
+        """从文件加载配置（备用方法）"""
         try:
             self.config = ConfigDAO.load(config_path)
             self._initialize_components()
             return True
         except Exception as ex:
-            print(f"❌ 加载配置失败: {ex}")
-            self.config = self._get_default_config()
-            self._initialize_components()
+            print(f"❌ 加载配置文件失败: {ex}")
             return False
     
     def start_generation(self, dry_run: bool = False, explain_mode: bool = False) -> bool:

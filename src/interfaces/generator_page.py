@@ -11,12 +11,12 @@ class GeneratorPage(BasePage):
     职责：UI展示 + 直接调用RecipeService
     """
     
-    def __init__(self, router, page: ft.Page, service: RecipeService):
+    def __init__(self, router, page: ft.Page, recipe_service: RecipeService):
         super().__init__(router, page)
-        self.service = service  # 注入Service
+        self.recipe_service = recipe_service  # 重命名，更清晰
         
-        # 设置回调
-        self.service.set_callbacks(
+        # 设置回调（保持不变）
+        self.recipe_service.set_callbacks(
             on_progress=self._on_progress,
             on_complete=self._on_complete,
             on_error=self._on_error
@@ -111,14 +111,12 @@ class GeneratorPage(BasePage):
     # ==================== 事件处理器 ====================
     
     def _handle_load_config(self, e: ft.ControlEvent):
-        """同步配置按钮点击"""
-        # 从SettingsService获取最新配置
-        from src.service.settings_service import SettingsService
-        settings_service = SettingsService()
+        """同步配置按钮点击 - 现在只需一行"""
+        success = self.recipe_service.reload_config()
         
-        config_dict = settings_service.get_config_dict()
-        if config_dict.get("template_files"):
-            self.log_message(f"✅ 配置已同步，加载了 {len(config_dict['template_files'])} 个模板")
+        if success:
+            template_count = len(self.recipe_service.config.template_files)
+            self.log_message(f"✅ 配置已同步，加载了 {template_count} 个模板")
         else:
             self.log_message("⚠️ 请先在设置页配置模板", is_error=True)
     
