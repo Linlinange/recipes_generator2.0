@@ -1,40 +1,33 @@
-
 import flet as ft
 from src.interfaces.base_page import BasePage
 
+
 class HomePage(BasePage):
-    """首页 - 纯UI"""
+    """
+    HomePage - 首页（占位UI）
+    职责：纯UI展示，欢迎信息
+    """
+    
+    def __init__(self, router, page: ft.Page):
+        super().__init__(router, page)
+        # 不依赖任何Service
     
     def build(self) -> ft.Control:
-        # 创建组件
-        self.add_component(
-            "welcome_text",
-            ft.Text("🏠 MC Recipe Generator", size=30, weight=ft.FontWeight.BOLD)
-        )
-        
-        self.add_component(
-            "generator_btn",
-            ft.ElevatedButton("开始生成配方 →", width=200, height=50)
-        )
-        
-        self.add_component(
-            "localizer_btn",
-            ft.ElevatedButton("开始批量本地化 →", width=200, height=50)
-        )
-        
-        # 组装页面
+        """纯UI展示"""
         return ft.Container(
             content=ft.Column([
-                self.get_component("welcome_text"),
-                ft.Text("欢迎使用Minecraft配方生成工具！", size=16),
-                ft.Text("功能特色：", size=18, weight=ft.FontWeight.BOLD),
-                ft.Text("• 支持批量生成JSON配方文件"),
-                ft.Text("• 灵活的模板占位符替换"),
-                ft.Text("• 预览模式避免误操作"),
-                ft.Text("• 可视化日志输出"),
-                ft.Divider(),
-                self.get_component("generator_btn"),
-                self.get_component("localizer_btn"),
-            ], expand=True, spacing=20),
-            padding=ft.padding.only(top=20)
+                ft.Text("🏠 MC Recipe Generator", size=30, weight=ft.FontWeight.BOLD),
+                ft.Text("欢迎使用配方生成工具！", size=16),
+                ft.Divider(height=30),
+                ft.Text("✨ 核心功能：", size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("• ⚙️ 设置页：管理配置和模板", size=14),
+                ft.Text("• 🚀 生成器：批量生成配方", size=14),
+                ft.Text("• 📄 本地化：批量生成翻译（开发中）", size=14),
+                ft.Divider(height=30),
+                ft.Text("📝 使用流程：", size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("1. 在【设置】页加载配置", size=14),
+                ft.Text("2. 扫描并选择模板", size=14),
+                ft.Text("3. 在【生成器】页开始生成", size=14),
+            ], expand=True, spacing=15),
+            padding=ft.padding.only(top=40, left=20, right=20)
         )
