@@ -14,7 +14,7 @@ class LocalizerPage(BasePage):
         
         # 控制面板组件
         
-        generate_btn = self.add_component(
+        localize_btn = self.add_component(
             "localize_btn",
             ft.ElevatedButton("📝 开始本地化", expand=True, width=200)
         )
@@ -52,7 +52,7 @@ class LocalizerPage(BasePage):
                 ft.Text("📄 本地化工具", size=24, weight=ft.FontWeight.BOLD),
                 
                 ft.Row([
-                    generate_btn,
+                    localize_btn,
                     open_btn,
                 ], spacing=10),
             ], spacing=15),
