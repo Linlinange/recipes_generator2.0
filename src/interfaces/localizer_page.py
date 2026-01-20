@@ -6,7 +6,7 @@ from src.interfaces.base_page import BasePage
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-class GeneratorPage(BasePage):
+class LocalizerPage(BasePage):
     """生成器页面类 - 纯UI"""
     
     def build(self) -> ft.Control:
@@ -14,19 +14,9 @@ class GeneratorPage(BasePage):
         
         # 控制面板组件
         
-        dry_run_checkbox = self.add_component(
-            "dry_run_checkbox",
-            ft.Checkbox(label="预览模式", value=True)
-        )
-        
-        explain_checkbox = self.add_component(
-            "explain_checkbox",
-            ft.Checkbox(label="解释模式", value=False)
-        )
-        
         generate_btn = self.add_component(
-            "generate_btn",
-            ft.ElevatedButton("🚀 开始生成", expand=True, width=200)
+            "localize_btn",
+            ft.ElevatedButton("📝 开始本地化", expand=True, width=200)
         )
         
         open_btn = self.add_component(
@@ -49,7 +39,7 @@ class GeneratorPage(BasePage):
         stats_container = self.add_component(
             "stats_container",
             ft.Container(
-                content=ft.Text("总数: 0 个文件", size=14, weight=ft.FontWeight.BOLD),
+                content=ft.Text("总数: 0 个文件, 0 个条目", size=14, weight=ft.FontWeight.BOLD),
                 padding=10,
                 bgcolor="#DDDDEE",
                 border_radius=5,
@@ -59,12 +49,7 @@ class GeneratorPage(BasePage):
         # 布局组装
         control_panel = ft.Container(
             content=ft.Column([
-                ft.Text("⚙️ 配方生成器", size=24, weight=ft.FontWeight.BOLD),
-                
-                ft.Row([
-                    dry_run_checkbox,
-                    explain_checkbox,
-                ], spacing=20),
+                ft.Text("📄 本地化工具", size=24, weight=ft.FontWeight.BOLD),
                 
                 ft.Row([
                     generate_btn,
@@ -84,17 +69,9 @@ class GeneratorPage(BasePage):
     
     # ========== 事件注册方法（由run_flet调用） ==========
     
-    def register_dry_run_change_event(self, handler: callable):
-        """注册预览模式改变事件"""
-        self.register_event("dry_run_checkbox", "change", handler)
-    
-    def register_explain_change_event(self, handler: callable):
-        """注册解释模式改变事件"""
-        self.register_event("explain_checkbox", "change", handler)
-    
-    def register_generate_event(self, handler: callable):
-        """注册生成按钮点击事件"""
-        self.register_event("generate_btn", "click", handler)
+    def register_localize_event(self, handler: callable):
+        """注册开始本地化按钮点击事件"""
+        self.register_event("localize_btn", "click", handler)
     
     def register_open_event(self, handler: callable):
         """注册打开目录按钮点击事件"""
