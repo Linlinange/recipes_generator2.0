@@ -108,45 +108,26 @@ class SettingsService:
             self.is_scanning = False
     
     def add_template(self, filename: str) -> bool:
-        """
-        添加模板到配置
-        参数:
-            filename: 模板文件名（不含路径）
-        返回:
-            成功返回True（已去重）
-        """
+        """添加模板到配置"""
         if not self.config:
-            print("❌ 配置未加载")
             return False
         
-        if filename not in self.config.template_files:
-            self.config.template_files.append(filename)
-            print(f"➕ 已添加模板: {filename}")
-            return True
-        
-        print(f"⚠️ 模板已存在: {filename}")
-        return False
+        return self.config.add_template_file(filename)
     
     def remove_template(self, filename: str) -> bool:
-        """
-        从配置中移除模板
-        参数:
-            filename: 模板文件名
-        返回:
-            成功返回True
-        """
+        """从配置中移除模板"""
         if not self.config:
-            print("❌ 配置未加载")
             return False
         
-        if filename in self.config.template_files:
-            self.config.template_files.remove(filename)
-            print(f"➖ 已移除模板: {filename}")
-            return True
-        
-        print(f"⚠️ 模板不存在: {filename}")
-        return False
+        return self.config.remove_template_file(filename)
     
+    def add_rule(self, rule: Dict[str, Any]) -> bool:
+        """添加替换规则"""
+        if not self.config:
+            return False
+        
+        return self.config.add_rule(rule)
+
     def update_config_from_form(self, output_dir: str, template_dir: str, namespace: str):
         """
         从表单更新配置对象

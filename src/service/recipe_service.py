@@ -23,21 +23,34 @@ class RecipeService:
     """配方生成服务"""
     
     def __init__(self, settings_service: Optional['SettingsService'] = None):
+
+        # 依赖注入
+        self.settings_service = settings_service
         
-        # 持有对所有DAO的引用
+        # 业务组件（执行者）
         self.config: Optional[Config] = None
         self.engine: Optional[ReplacementEngine] = None
         self.template_loader: Optional[TemplateLoader] = None
         self.output_writer: Optional[OutputWriter] = None
         
-        # 新增：依赖SettingsService
-        self.settings_service = settings_service
+        # 业务状态（生成任务的生命周期）
+        self._is_running = False          # 任务是否在运行
+        self._cancel_requested = False    # 用户是否请求取消
+        self._processed_count = 0         # 已处理数量
+        self._current_template_name = ""  # 当前模板名
+        self._total_templates = 0         # 总模板数
+        
+        # 业务回调（通知外部状态变化）
+        self.on_progress: Optional[Callable[[str], None]] = None
+        self.on_complete: Optional[Callable[[Dict[str, Any]], None]] = None
+        self.on_error: Optional[Callable[[Exception], None]] = None
         
         # 如果提供了SettingsService，立即加载配置
         if settings_service:
             self.reload_config()
         
         # ... 其他初始化代码 ...
+        # 待完善
     
     # ==================== 公共API（供Page调用） ====================
     
@@ -287,8 +300,9 @@ class RecipeService:
     
     def _log(self, message: str, is_error: bool = False):
         """日志输出（带回调）"""
-        if self.on_progress:
-            self.on_progress(message)
+        callback = getattr(self, 'on_progress', None)
+        if callback:
+            callback(message)
         else:
             print(message)
     

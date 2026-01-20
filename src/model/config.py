@@ -79,18 +79,18 @@ class Config:
 
     @property
     def template_files(self) -> List[str]:
-        """获取模板文件列表（只读属性）"""
+        """获取模板文件列表（只读）"""
         return self._template_files.copy()
 
     @template_files.setter
     def template_files(self, value: List[str]):
         """
-        参数: 需要验证唯一性、格式正确性
-        触发: 赋值时自动去重、转换类型
+        设置模板文件列表（自动去重、过滤空值）
+        参数: value - 字符串列表或可以转换为字符串的可迭代对象
         """
-        # 类型转换与空值处理
-        if not isinstance(value, list):
-            raise TypeError("template_files必须是列表类型")
+        # 类型验证
+        if not isinstance(value, (list, tuple)):
+            raise TypeError("template_files必须是列表或元组类型")
         
         # 去重并过滤空字符串
         unique_files = []
@@ -105,27 +105,37 @@ class Config:
 
     @property
     def rules(self) -> List[ReplacementRule]:
-        """获取替换规则列表（只读属性）"""
+        """获取替换规则列表（只读）"""
         return self._rules.copy()
 
     @rules.setter
     def rules(self, value: List[Dict[str, Any]]):
         """
-        参数: 需要验证唯一性、格式正确性
-        触发: 赋值时自动去重、转换类型
+        设置替换规则列表（自动去重、创建Rule对象）
+        参数: value - 字典列表或ReplacementRule对象列表
         """
         # 类型验证
-        if not isinstance(value, list):
-            raise TypeError("rules必须是字典列表类型")
+        if not isinstance(value, (list, tuple)):
+            raise TypeError("rules必须是字典列表或ReplacementRule对象列表")
+        
+        # 统一转换为字典
+        rule_dicts = []
+        for item in value:
+            if isinstance(item, ReplacementRule):
+                rule_dicts.append(item.to_dict())
+            elif isinstance(item, dict):
+                rule_dicts.append(item)
+            else:
+                raise TypeError("rules列表项必须是dict或ReplacementRule")
         
         # 去重逻辑（基于type+values组合去重）
         unique_rules = []
         seen_keys = set()
-        for rule_dict in value:
-            # 创建ReplacementRule对象（自动过滤无效字段）
+        for rule_dict in rule_dicts:
+            # 创建ReplacementRule对象
             rule = ReplacementRule.create(rule_dict)
             
-            # 生成唯一标识键（type + values拼接）
+            # 生成唯一标识键（type + values排序后拼接）
             rule_key = (rule.type, tuple(sorted(rule.values)))
             if rule_key not in seen_keys:
                 seen_keys.add(rule_key)
@@ -142,4 +152,48 @@ class Config:
             "template_files": self.template_files,
             "replacements": [rule.to_dict() for rule in self.rules]
         }
+
+    # ========== 新增：便捷的修改方法 ==========
     
+    def add_template_file(self, filename: str) -> bool:
+        """
+        添加模板文件（如果已存在则跳过）
+        返回: 是否成功添加（True=新增，False=已存在）
+        """
+        if not filename or not isinstance(filename, str):
+            raise ValueError("filename必须是字符串")
+        
+        if filename in self._template_files:
+            return False  # 已存在
+        
+        self._template_files.append(filename)
+        return True
+    
+    def remove_template_file(self, filename: str) -> bool:
+        """
+        移除模板文件（如果不存在则跳过）
+        返回: 是否成功移除（True=移除，False=不存在）
+        """
+        if filename in self._template_files:
+            self._template_files.remove(filename)
+            return True
+        return False
+    
+    def add_rule(self, rule: Dict[str, Any]) -> bool:
+        """
+        添加替换规则（自动去重）
+        返回: 是否成功添加（True=新增，False=已存在或无效）
+        """
+        try:
+            new_rule = ReplacementRule.create(rule)
+            rule_key = (new_rule.type, tuple(sorted(new_rule.values)))
+            
+            for existing_rule in self._rules:
+                existing_key = (existing_rule.type, tuple(sorted(existing_rule.values)))
+                if rule_key == existing_key:
+                    return False  # 已存在
+            
+            self._rules.append(new_rule)
+            return True
+        except Exception:
+            return False
