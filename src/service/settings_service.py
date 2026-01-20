@@ -14,21 +14,9 @@ from src.dao.template_loader import TemplateLoader
 
 
 class SettingsService:
-    """单例：配置业务服务"""
-    
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+    """配置业务服务"""
     
     def __init__(self):
-        if self._initialized:
-            return
-        
-        self._initialized = True
         
         # 核心数据：配置对象
         self.config: Optional[Config] = None

@@ -9,21 +9,10 @@ from typing import Dict, Any
 
 
 class HomeService:
-    """单例：首页服务（占位实现）"""
-    
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+    """首页服务（占位实现）"""
     
     def __init__(self):
-        if self._initialized:
-            return
         
-        self._initialized = True
         self.app_name = "MC Recipe Generator"
         self.app_version = "1.2.0"  # 硬编码版本，从pyproject.toml读取的功能待实现
         self.placeholder_stats = {

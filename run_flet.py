@@ -30,7 +30,7 @@ def main(page: ft.Page):
     
     # 创建单例Service
     settings_service = SettingsService()
-    recipe_service = RecipeService()
+    recipe_service = RecipeService(settings_service)
     
     # 创建路由管理器
     router = BaseRouter(page)

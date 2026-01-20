@@ -63,11 +63,8 @@ class LocalizerService:
         
         return True
     
-    def get_supported_languages(self) -> list[str]:
+    def get_supported_languages(self):
         """
         获取支持的语言列表（预留接口）
         """
-        if not self.config:
-            return ["en_us"]
-        
-        return self.config.get("target_languages", ["en_us"])
+        pass

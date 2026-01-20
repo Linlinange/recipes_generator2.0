@@ -20,18 +20,9 @@ from src.service.settings_service import SettingsService
 
 
 class RecipeService:
-    """单例：配方生成服务"""
-    
-    _instance = None
-    
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+    """配方生成服务"""
     
     def __init__(self, settings_service: Optional['SettingsService'] = None):
-        self._initialized = False
         
         # 持有对所有DAO的引用
         self.config: Optional[Config] = None
