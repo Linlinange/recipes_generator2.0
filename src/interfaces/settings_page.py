@@ -25,7 +25,22 @@ class SettingsPage(BasePage):
         """构建页面UI"""
         self.config = self.get_default_config()
         
-        # 基础设置区域（禁用状态，等待Controller加载数据）
+        # 配置文件选择区域（新增）
+        config_file_field = self.add_component(
+            "config_file_field",
+            ft.TextField(
+                label="配置文件路径",
+                value="config.json",
+                expand=4,
+            )
+        )
+        
+        load_config_btn = self.add_component(
+            "load_config_btn",
+            ft.ElevatedButton("📂 加载配置", expand=1, height=50)
+        )
+        
+        # 基础设置区域
         output_dir_field = self.add_component(
             "output_dir_field",
             ft.TextField(label="输出目录", expand=True, disabled=True)
@@ -60,7 +75,7 @@ class SettingsPage(BasePage):
             ft.ElevatedButton(
                 "🔄 刷新模板列表",
                 icon=ft.icons.REFRESH,
-                disabled=True  # 初始禁用
+                disabled=True
             )
         )
         
@@ -93,6 +108,15 @@ class SettingsPage(BasePage):
             content=ft.Column([
                 ft.Text("⚙️ 配置文件设置", size=24, weight=ft.FontWeight.BOLD),
                 
+                # 配置文件选择（新增）
+                ft.Row([
+                    config_file_field,
+                    load_config_btn,
+                ], spacing=10),
+                
+                ft.Divider(),
+                
+                # 基础设置
                 ft.Text("基础设置", size=18, weight=ft.FontWeight.BOLD),
                 output_dir_field,
                 template_dir_field,
@@ -100,6 +124,7 @@ class SettingsPage(BasePage):
                 
                 ft.Divider(),
                 
+                # 模板文件管理
                 ft.Text("模板文件管理", size=18, weight=ft.FontWeight.BOLD),
                 ft.Row([
                     self._refresh_btn,
@@ -110,11 +135,13 @@ class SettingsPage(BasePage):
                 
                 ft.Divider(),
                 
+                # 替换规则列表
                 ft.Text("替换规则", size=18, weight=ft.FontWeight.BOLD),
                 rules_list_view,
                 
                 ft.Divider(),
                 
+                # 保存按钮
                 save_btn,
             ], expand=True, spacing=15, scroll=ft.ScrollMode.AUTO),
             padding=ft.padding.all(20),
@@ -279,7 +306,6 @@ class SettingsPage(BasePage):
         """
         模板项点击事件 - 转发给Controller处理
         """
-        # 复选框状态切换已在on_change中处理，这里保留扩展性
         controller = getattr(self.page, '_settings_controller', None)
         if controller:
             controller.handle_template_toggle(filename)
@@ -339,9 +365,6 @@ class SettingsPage(BasePage):
         output_dir = self.get_component("output_dir_field").value
         template_dir = self.get_component("template_dir_field").value
         namespace = self.get_component("default_ns_field").value
-        
-        # template_files由复选框操作实时同步到self.config
-        # rules目前只读，由初始加载决定
         
         return {
             "output_dir": output_dir,
