@@ -65,7 +65,7 @@ class SettingsPage(BasePage):
             "template_dir_field",
             ft.TextField(
                 label="模板目录",
-                expand=True,
+                height=80,
                 disabled=False,
                 on_change=self._on_template_dir_change  # 内部绑定
             )
@@ -269,7 +269,7 @@ class SettingsPage(BasePage):
             checkbox = ft.Checkbox(
                 value=is_checked,
                 label=filename,
-                on_change=lambda e, f=filename: self._on_template_checkbox_change(f, e.control.value)
+                height=100
             )
             self._template_checkboxes[filename] = checkbox
             
@@ -277,7 +277,7 @@ class SettingsPage(BasePage):
                 leading=checkbox,
                 title=ft.Text(filename, size=14),
                 selected=is_checked,
-                on_click=lambda e, f=filename: self._on_template_tile_click(f),
+                height=100
             )
             list_view.controls.append(list_tile)
         
@@ -341,7 +341,7 @@ class SettingsPage(BasePage):
         self._save_btn.bgcolor = ft.colors.GREEN
         self.page.update()
         
-        def restore():
+        async def restore():
             self._save_btn.text = original["text"]
             self._save_btn.bgcolor = original["bgcolor"]
             self.page.update()

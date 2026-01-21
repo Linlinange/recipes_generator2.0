@@ -3,6 +3,31 @@
 from pathlib import Path
 import sys
 import flet as ft
+import functools
+
+def patch_proactor_del():
+    """在 Python 3.8 中解决 ProactorEventLoop.__del__ 的 RuntimeError"""
+    if sys.version_info < (3, 9) and sys.platform == "win32":
+        from asyncio.proactor_events import _ProactorBasePipeTransport
+        
+        # 保存原始方法
+        original_del = _ProactorBasePipeTransport.__del__
+        
+        @functools.wraps(original_del)
+        def silent_del(self):
+            try:
+                original_del(self)
+            except RuntimeError as e:
+                if str(e) != 'Event loop is closed':
+                    raise
+        
+        # 应用补丁
+        _ProactorBasePipeTransport.__del__ = silent_del
+
+# 应用补丁
+patch_proactor_del()
+
+import asyncio
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -23,6 +48,7 @@ from src.service.recipe_service import RecipeService
 
 def main(page: ft.Page):
     """主入口 - 事件在Page内部绑定"""
+
     page.title = "MC Recipe Generator"
     page.window.width = 900
     page.window.height = 700
@@ -30,7 +56,7 @@ def main(page: ft.Page):
     page.window.min_width = 600
     page.window.min_height = 400
     
-    # 创建单例Service
+    # 创建Service
     settings_service = SettingsService()
     recipe_service = RecipeService(settings_service)
     
@@ -61,4 +87,4 @@ def main(page: ft.Page):
     router.go("home")
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    asyncio.run(ft.app_async(target=main))
