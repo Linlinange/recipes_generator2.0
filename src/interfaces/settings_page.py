@@ -8,15 +8,15 @@ from src.service.settings_service import SettingsService
 
 class SettingsPage(BasePage):
     """
-    SettingsPage - 设置页（内部绑定事件）
-    职责：UI展示 + 直接调用SettingsService
+    设置页面 - 负责UI展示和用户交互
+    所有的耗时操作（如文件扫描）都会用后台线程处理，避免界面卡死
     """
     
     def __init__(self, router, page: ft.Page, service: SettingsService):
         super().__init__(router, page)
-        self.service = service  # 注入Service
+        self.service = service
         
-        # UI状态
+        # UI状态存储
         self._template_checkboxes: Dict[str, ft.Checkbox] = {}
         self._selected_count_text: ft.Text = ft.Text("已选择: 0 个模板", size=14)
         self._status_text: ft.Text = ft.Text("等待加载配置...", size=12, color=ft.colors.ORANGE)
@@ -24,7 +24,7 @@ class SettingsPage(BasePage):
         self._save_btn: Optional[ft.ElevatedButton] = None
     
     def build(self) -> ft.Control:
-        """构建UI并直接绑定事件"""
+        """构建UI界面"""
         # 初始加载配置
         if not self.service.has_config():
             self.service.load_config()
@@ -37,7 +37,7 @@ class SettingsPage(BasePage):
                 value="config.json",
                 expand=True,
                 disabled=False,
-                on_change=self._on_config_path_change  # 内部绑定
+                on_change=self._on_config_path_change
             )
         )
         
@@ -46,7 +46,7 @@ class SettingsPage(BasePage):
             ft.ElevatedButton(
                 "📂 加载配置",
                 icon=ft.icons.FOLDER_OPEN,
-                on_click=self._handle_load_config  # 内部绑定
+                on_click=self._handle_load_config
             )
         )
         
@@ -57,7 +57,7 @@ class SettingsPage(BasePage):
                 label="输出目录",
                 expand=True,
                 disabled=False,
-                on_change=self._on_output_dir_change  # 内部绑定
+                on_change=self._on_output_dir_change
             )
         )
         
@@ -67,7 +67,7 @@ class SettingsPage(BasePage):
                 label="模板目录",
                 height=80,
                 disabled=False,
-                on_change=self._on_template_dir_change  # 内部绑定
+                on_change=self._on_template_dir_change
             )
         )
         
@@ -77,13 +77,11 @@ class SettingsPage(BasePage):
                 label="默认命名空间",
                 expand=True,
                 disabled=False,
-                on_change=self._on_namespace_change  # 内部绑定
+                on_change=self._on_namespace_change
             )
         )
         
         # 模板管理区域
-        self._status_text.value = "等待加载配置..."
-        
         template_list_view = self.add_component(
             "template_list_view",
             ft.ListView(spacing=5, padding=10, auto_scroll=True, height=300)
@@ -95,14 +93,8 @@ class SettingsPage(BasePage):
                 "🔄 刷新模板列表",
                 icon=ft.icons.REFRESH,
                 disabled=False,
-                on_click=self._handle_refresh_templates  # 内部绑定
+                on_click=self._handle_refresh_templates
             )
-        )
-        
-        # 统计信息
-        self._selected_count_text = self.add_component(
-            "selected_count_text",
-            self._selected_count_text
         )
         
         # 替换规则列表
@@ -119,7 +111,7 @@ class SettingsPage(BasePage):
                 bgcolor=ft.colors.BLUE,
                 color="white",
                 disabled=False,
-                on_click=self._handle_save_config  # 内部绑定
+                on_click=self._handle_save_config
             )
         )
         
@@ -135,7 +127,7 @@ class SettingsPage(BasePage):
                 default_ns_field,
                 ft.Divider(),
                 ft.Text("模板文件管理", size=18, weight=ft.FontWeight.BOLD),
-                ft.Row([self._refresh_btn, self.get_component("selected_count_text")], 
+                ft.Row([self._refresh_btn, self._selected_count_text], 
                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 self._status_text,
                 template_list_view,
@@ -148,7 +140,7 @@ class SettingsPage(BasePage):
             padding=ft.padding.all(20),
         )
     
-    # ==================== 内部事件处理器 ====================
+    # ==================== 事件处理器 ====================
     
     def _handle_load_config(self, e: ft.ControlEvent):
         """加载配置按钮点击"""
@@ -158,61 +150,55 @@ class SettingsPage(BasePage):
         success = self.service.load_config(config_path)
         if success:
             self._update_ui_from_service()
-            self._scan_templates_async()
+            self._scan_templates_async()  # 加载后自动刷新模板
             self.show_status_message("✅ 配置加载成功", is_error=False)
         else:
             self.show_status_message("⚠️ 加载失败，使用默认配置", is_error=True)
     
     def _handle_refresh_templates(self, e: ft.ControlEvent):
-        """刷新模板列表按钮点击"""
+        """刷新模板列表"""
         self._scan_templates_async()
     
     def _handle_save_config(self, e: ft.ControlEvent):
-        """保存配置按钮点击"""
-        # 从UI收集数据到Service
+        """保存配置"""
         self._update_service_from_ui()
         
-        # 验证
         errors = self.service.validate_config()
         if errors:
             self.show_status_message(f"❌ {errors[0]}", is_error=True)
             return
         
-        # 保存
         config_field = self.get_component("config_file_field")
         save_path = config_field.value if config_field else "config.json"
         
         success = self.service.save_config(save_path)
         if success:
-            self._show_save_success()
-            self.show_status_message(f"✅ 配置已保存", is_error=False)
+            self._show_save_success_animation()
+            self.show_status_message("✅ 配置已保存", is_error=False)
         else:
             self.show_status_message("❌ 保存失败", is_error=True)
     
     def _on_config_path_change(self, e: ft.ControlEvent):
         """配置文件路径变更"""
-        # 可以添加路径验证
         pass
     
     def _on_output_dir_change(self, e: ft.ControlEvent):
         """输出目录变更"""
-        # 可以实时验证目录有效性
         pass
     
     def _on_template_dir_change(self, e: ft.ControlEvent):
-        """模板目录变更"""
-        # 延迟1秒自动扫描
-        def delayed_scan():
-            import time
-            time.sleep(1.0)
-            self._scan_templates_async()
-        threading.Thread(target=delayed_scan, daemon=True).start()
+        """模板目录变更 - 自动刷新"""
+        # 立即显示提示，让用户知道即将自动扫描
+        self.show_status_message("⏳ 检测到目录变更，正在自动刷新...", is_error=False)
+        
+        # 在后台线程中执行扫描
+        self._scan_templates_async()
     
     def _on_namespace_change(self, e: ft.ControlEvent):
         """命名空间变更"""
         pass
     
-    # ==================== UI更新方法 ====================
+    # ==================== UI更新方法（同步） ====================
     
     def _update_ui_from_service(self):
         """从Service更新UI"""
@@ -220,7 +206,6 @@ class SettingsPage(BasePage):
             return
         
         config_dict = self.service.get_config_dict()
-        
         self.get_component("output_dir_field").value = config_dict["output_dir"]
         self.get_component("template_dir_field").value = config_dict["template_dir"]
         self.get_component("default_ns_field").value = config_dict["default_namespace"]
@@ -235,24 +220,6 @@ class SettingsPage(BasePage):
         namespace = self.get_component("default_ns_field").value
         
         self.service.update_config_from_form(output_dir, template_dir, namespace)
-    
-    def _scan_templates_async(self):
-        """异步扫描模板"""
-        if not self.service.has_config():
-            return
-        
-        self.set_refresh_button_loading(True)
-        
-        def scan_in_background():
-            templates = self.service.scan_templates()
-            
-            async def update_ui():
-                self._update_template_list(templates, f"✅ 扫描成功，找到 {len(templates)} 个模板")
-                self.set_refresh_button_loading(False)
-            
-            self.page.run_task(update_ui)
-        
-        threading.Thread(target=scan_in_background, daemon=True).start()
     
     def _update_template_list(self, templates: List[Path], status_message: str = ""):
         """更新模板列表UI"""
@@ -269,7 +236,7 @@ class SettingsPage(BasePage):
             checkbox = ft.Checkbox(
                 value=is_checked,
                 label=filename,
-                height=100
+                on_change=lambda e, fn=filename: self._on_template_checkbox_change(fn, e.control.value)
             )
             self._template_checkboxes[filename] = checkbox
             
@@ -277,7 +244,7 @@ class SettingsPage(BasePage):
                 leading=checkbox,
                 title=ft.Text(filename, size=14),
                 selected=is_checked,
-                height=100
+                on_click=lambda e, fn=filename: self._on_template_tile_click(fn)
             )
             list_view.controls.append(list_tile)
         
@@ -285,27 +252,6 @@ class SettingsPage(BasePage):
         self._status_text.color = ft.colors.GREEN if "成功" in status_message else ft.colors.ORANGE
         self._update_selected_count()
         self.page.update()
-    
-    # ==================== 辅助方法 ====================
-    
-    def _on_template_tile_click(self, filename: str):
-        """模板项点击：切换复选框"""
-        checkbox = self._template_checkboxes.get(filename)
-        if checkbox:
-            checkbox.value = not checkbox.value
-            self.page.update()
-            self._on_template_checkbox_change(filename, checkbox.value)
-    
-    def _on_template_checkbox_change(self, filename: str, is_checked: bool):
-        """复选框变更"""
-        if is_checked:
-            self.service.add_template(filename)
-            self.show_status_message(f"➕ 已添加: {filename}", is_error=False)
-        else:
-            self.service.remove_template(filename)
-            self.show_status_message(f"➖ 已移除: {filename}", is_error=False)
-        
-        self._update_selected_count()
     
     def _update_selected_count(self):
         """更新选中计数"""
@@ -321,7 +267,7 @@ class SettingsPage(BasePage):
         self._status_text.update()
     
     def set_refresh_button_loading(self, loading: bool):
-        """设置刷新按钮加载状态"""
+        """设置刷新按钮状态"""
         if loading:
             self._refresh_btn.text = "⏳ 扫描中..."
             self._refresh_btn.disabled = True
@@ -330,20 +276,79 @@ class SettingsPage(BasePage):
             self._refresh_btn.disabled = False
         self.page.update()
     
-    def _show_save_success(self):
-        """显示保存成功动画"""
-        original = {
-            "text": self._save_btn.text,
-            "bgcolor": self._save_btn.bgcolor,
-        }
+    # ==================== 耗时操作异步处理 ====================
+    
+    def _scan_templates_async(self):
+        """
+        后台线程扫描模板文件（防止界面卡死）
+        这是唯一需要异步的地方
+        """
+        if not self.service.has_config():
+            return
         
+        # 设置加载状态
+        self.set_refresh_button_loading(True)
+        
+        def scan_in_background():
+            try:
+                # 执行耗时操作
+                templates = self.service.scan_templates()
+                
+                # 在主线程中更新UI
+                self.page.invoke(lambda: self._update_template_list(
+                    templates, 
+                    f"✅ 扫描成功，找到 {len(templates)} 个模板"
+                ))
+            except Exception as e:
+                self.page.invoke(lambda: self.show_status_message(f"❌ 扫描失败: {str(e)}", is_error=True))
+            finally:
+                self.page.invoke(lambda: self.set_refresh_button_loading(False))
+        
+        # 启动后台线程
+        threading.Thread(target=scan_in_background, daemon=True).start()
+    
+    # ==================== 辅助方法 ====================
+    
+    def _on_template_tile_click(self, filename: str):
+        """点击模板项"""
+        checkbox = self._template_checkboxes.get(filename)
+        if checkbox:
+            checkbox.value = not checkbox.value
+            checkbox.update()
+            self._on_template_checkbox_change(filename, checkbox.value)
+    
+    def _on_template_checkbox_change(self, filename: str, is_checked: bool):
+        """复选框变更"""
+        if is_checked:
+            self.service.add_template(filename)
+            self.show_status_message(f"➕ 已添加: {filename}", is_error=False)
+        else:
+            self.service.remove_template(filename)
+            self.show_status_message(f"➖ 已移除: {filename}", is_error=False)
+        
+        self._update_selected_count()
+    
+    def _show_save_success_animation(self):
+        """保存成功动画"""
+        # 保存当前状态
+        original_text = self._save_btn.text
+        original_bgcolor = self._save_btn.bgcolor
+        
+        # 显示成功
         self._save_btn.text = "✅ 保存成功"
         self._save_btn.bgcolor = ft.colors.GREEN
         self.page.update()
         
-        async def restore():
-            self._save_btn.text = original["text"]
-            self._save_btn.bgcolor = original["bgcolor"]
-            self.page.update()
+        # 后台线程等待3秒后恢复
+        def restore_after_delay():
+            import time
+            time.sleep(3)
+            self.page.invoke(lambda: self._restore_save_button(original_text, original_bgcolor))
         
-        self.page.run_task(restore, delay=3)
+        threading.Thread(target=restore_after_delay, daemon=True).start()
+    
+    def _restore_save_button(self, original_text, original_bgcolor):
+        """恢复按钮状态"""
+        self._save_btn.text = original_text
+        self._save_btn.bgcolor = original_bgcolor
+        self.page.update()
