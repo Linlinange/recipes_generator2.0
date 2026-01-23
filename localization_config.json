@@ -41,8 +41,7 @@
                     "_wood": "_hyphae",
                     "material_zh_cn": "绯红",
                     "树苗": "菌",
-                    "原木": "菌柄",
-                    "木": "菌核"
+                    "原木": "菌柄"
                 },
                 "dark_oak": {"material_zh_cn": "深色橡木"},
                 "jungle": {"material_zh_cn": "丛林"},
@@ -57,8 +56,7 @@
                     "_wood": "_hyphae",
                     "material_zh_cn": "诡异",
                     "树苗": "菌",
-                    "原木": "菌柄",
-                    "木": "菌核"
+                    "原木": "菌柄"
                 },
                 "spruce": {"material_zh_cn": "云杉"}
             },

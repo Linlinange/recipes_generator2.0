@@ -41,6 +41,7 @@ from src.interfaces.settings_page import SettingsPage
 # 服务导入（只导入已实现的核心服务）
 from src.service.settings_service import SettingsService
 from src.service.recipe_service import RecipeService
+from src.service.localizer_service import LocalizerService
 
 # ============================================================================
 # 主入口 - 极简版
